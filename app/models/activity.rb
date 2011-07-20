@@ -88,11 +88,11 @@ class Activity < ActiveRecord::Base
   end
   
   def target
-    @target ||= target_id ? Kernel.const_get(target_type).find_with_deleted(target_id) : nil
+    @target ||= target_id ? target_type.constantize.find_with_deleted(target_id) : nil
   end
   
   def comment_target
-    @comment_target ||= comment_target_id ? Kernel.const_get(comment_target_type).find_with_deleted(comment_target_id) : nil
+    @comment_target ||= comment_target_id ? comment_target_type.constantize.find_with_deleted(comment_target_id) : nil
   end
   
   def user
