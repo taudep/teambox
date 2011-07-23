@@ -10,7 +10,7 @@ Teambox::Application.routes.draw do
   resources :sites, :only => [:show, :new, :create]
 
   match '/public' => 'public/projects#index', :as => :public_projects
-  match '/user_finder' => 'user_finder#find'
+  match '/user_finder' => 'user_finder#find', :as => :user_finder
 
   namespace :public do
     match ':id' => 'projects#show', :as => :project
