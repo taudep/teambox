@@ -156,12 +156,20 @@ class Emailer < ActionMailer::Base
                     truncate(@conversation.comments.first(:order => 'id ASC').body.strip) :
                     @conversation.name
 
+    subject = "[#{@project.permalink}] #{title}"
+    extra_headers = {'Message-Id' => "<conversation/#{@conversation.id}/comment/#{@conversation.recent_comments.first.id}@teambox.com>"}
+
+    if @conversation.comments.count > 1
+      subject = "Re: #{subject}"
+      extra_headers['In-Reply-To'] = "<conversation/#{@conversation.id}/comment/#{@conversation.recent_comments.second.id}@teambox.com>"
+    end
+
     mail({
       :to            => @recipient.email,
-      :subject       => "[#{@project.permalink}] #{title}"
+      :subject       => subject
     }.merge(
       from_reply_to "#{@project.permalink}+conversation+#{@conversation.id}", @conversation.comments.first.user
-    ))
+    ).merge(extra_headers))
   end
 
   def notify_task(user_id, project_id, task_id)
@@ -170,12 +178,20 @@ class Emailer < ActionMailer::Base
     @task_list    = @task.task_list
     @recipient    = User.find(user_id)
     @organization = @task.project.organization
+    subject = "[#{@project.permalink}] #{@task.name}"
+    extra_headers = {'Message-Id' => "<task/#{@task.id}/comment/#{@task.recent_comments.first.id}@teambox.com>"}
+
+    if @task.comments.count > 1
+      subject = "Re: #{subject}"
+      extra_headers['In-Reply-To'] = "<task/#{@task.id}/comment/#{@task.recent_comments.second.id}@teambox.com>"
+    end
+    
     mail({
       :to            => @recipient.email,
-      :subject       => "[#{@project.permalink}] #{@task.name}#{task_description(@task)}"
+      :subject       => subject
     }.merge(
       from_reply_to "#{@project.permalink}+task+#{@task.id}", @task.comments.first.user
-    ))
+    ).merge(extra_headers))
   end
 
   def notify_activity(user_id, project_id, activity_id)
