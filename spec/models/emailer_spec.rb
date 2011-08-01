@@ -26,7 +26,53 @@ describe Emailer do
       end
     end
   end
-  
+
+  describe "email headers and titles for threading" do
+    before do
+      I18n.locale = :en
+      @user = Factory(:user, :locale => I18n.locale.to_s)
+      @another_user = Factory(:user, :locale => I18n.locale.to_s)
+      @email_domain = Teambox.config.smtp_settings.domain
+      @task = Factory(:task)
+      @project = @task.project
+      @first_comment = Factory(:comment, :target => @task)
+      @conversation = Factory(:conversation)
+    end
+
+    it "should set correct header and title for task notification" do
+      @email = Emailer.notify_task(@user.id, @project.id, @task.id)
+      @email.subject.should eql "[#{@project.permalink}] #{@task.name}"
+      @email.message_id.should eql "project_#{@project.id}/task_#{@task.id}/comment_#{@first_comment.id}@#{@email_domain}"
+      @email.in_reply_to.should be nil
+    end
+
+    it "should set correct header and title for task second comment notification" do
+      @second_comment = Factory(:comment, :target => @task, :project => @project, :user => @another_user,
+        :body => "I agree!", :created_at => @first_comment.created_at + 5.minutes )
+      @second_email = Emailer.notify_task(@user.id, @project.id, @task.id)
+      @second_email.subject.should eql "Re: [#{@project.permalink}] #{@task.name}"
+      @second_email.message_id.should eql "project_#{@project.id}/task_#{@task.id}/comment_#{@second_comment.id}@#{@email_domain}"
+      @second_email.in_reply_to.should eql "project_#{@project.id}/task_#{@task.id}/comment_#{@first_comment.id}@#{@email_domain}"
+    end
+
+    it "should set correct header and title for conversation notification" do
+      @email = Emailer.notify_conversation(@user.id, @project.id, @conversation.id)
+      @email.subject.should eql "[#{@project.permalink}] #{@conversation.name}"
+      @email.message_id.should eql "project_#{@project.id}/conversation_#{@conversation.id}/comment_#{@conversation.first_comment.id}@#{@email_domain}"
+      @email.in_reply_to.should be nil
+    end
+
+    it "should set correct header and title for conversation second comment notification" do
+      @second_comment = Factory(:comment, :target => @conversation, :user => @another_user, :project => @project,
+        :body => "Disagree!", :created_at => @conversation.first_comment.created_at + 5.minutes )
+      @second_email = Emailer.notify_conversation(@user.id, @project.id, @conversation.id)
+      @second_email.subject.should eql "Re: [#{@project.permalink}] #{@conversation.name}"
+      @second_email.message_id.should eql "project_#{@project.id}/conversation_#{@conversation.id}/comment_#{@second_comment.id}@#{@email_domain}"
+      @second_email.in_reply_to.should eql "project_#{@project.id}/conversation_#{@conversation.id}/comment_#{@conversation.first_comment.id}@#{@email_domain}"
+    end
+
+  end
+
   describe "email rendering" do
     # I18n.available_locales, too slow! Top 3 only
     [:en, :es, :fr].each do |locale|
@@ -41,6 +87,7 @@ describe Emailer do
         with_locale(locale) do
           lambda { Emailer.notify_task(@user.id, @task.project.id, @task.id) }.should_not raise_error
         end
+
       end
 
       it "should render valid conversation notification for #{locale}" do
