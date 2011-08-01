@@ -147,21 +147,22 @@ class Emailer < ActionMailer::Base
   end
 
   def notify_conversation(user_id, project_id, conversation_id)
+
     @project      = Project.find(project_id)
     @conversation = Conversation.find(conversation_id)
     @recipient    = User.find(user_id)
     @organization = @project.organization
 
     title         = @conversation.name.blank? ? 
-                    truncate(@conversation.comments.first(:order => 'id ASC').body.strip) :
+                    truncate(@conversation.first_comment.body.strip) :
                     @conversation.name
 
     subject = "[#{@project.permalink}] #{title}"
-    extra_headers = {'Message-Id' => message_id(@conversation, @conversation.recent_comments.first)}
+    extra_headers = {'Message-Id' => message_id(@project, @conversation, @conversation.recent_comments.first)}
 
     if @conversation.comments.count > 1
       subject = "Re: #{subject}"
-      extra_headers['In-Reply-To'] = message_id(@conversation, @conversation.recent_comments.second)
+      extra_headers['In-Reply-To'] = message_id(@project, @conversation, @conversation.first_comment)
     end
 
     mail({
@@ -179,11 +180,11 @@ class Emailer < ActionMailer::Base
     @recipient    = User.find(user_id)
     @organization = @task.project.organization
     subject = "[#{@project.permalink}] #{@task.name}"
-    extra_headers = {'Message-Id' => message_id(@task, @task.recent_comments.first)}
+    extra_headers = {'Message-Id' => message_id(@project, @task, @task.recent_comments.first)}
 
     if @task.comments.count > 1
       subject = "Re: #{subject}"
-      extra_headers['In-Reply-To'] = message_id(@task, @task.recent_comments.second)
+      extra_headers['In-Reply-To'] = message_id(@project, @task, @task.first_comment)
     end
     
     mail({
@@ -402,6 +403,6 @@ class Emailer < ActionMailer::Base
     end
 
     def message_id(*args)
-      "<#{args.collect {|item| [item.class.name.underscore,item.id].join('-')}.join('-')}@#{Teambox.config.smtp_settings.domain}>"
+      "<#{args.collect {|item| [item.class.name.underscore,item.id].join('_')}.join('/')}@#{Teambox.config.smtp_settings.domain}>"
     end
 end
