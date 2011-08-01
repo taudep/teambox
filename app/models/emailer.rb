@@ -157,11 +157,11 @@ class Emailer < ActionMailer::Base
                     @conversation.name
 
     subject = "[#{@project.permalink}] #{title}"
-    extra_headers = {'Message-Id' => "<conversation/#{@conversation.id}/comment/#{@conversation.recent_comments.first.id}@teambox.com>"}
+    extra_headers = {'Message-Id' => message_id(@conversation, @conversation.recent_comments.first)}
 
     if @conversation.comments.count > 1
       subject = "Re: #{subject}"
-      extra_headers['In-Reply-To'] = "<conversation/#{@conversation.id}/comment/#{@conversation.recent_comments.second.id}@teambox.com>"
+      extra_headers['In-Reply-To'] = message_id(@conversation, @conversation.recent_comments.second)
     end
 
     mail({
@@ -179,11 +179,11 @@ class Emailer < ActionMailer::Base
     @recipient    = User.find(user_id)
     @organization = @task.project.organization
     subject = "[#{@project.permalink}] #{@task.name}"
-    extra_headers = {'Message-Id' => "<task/#{@task.id}/comment/#{@task.recent_comments.first.id}@teambox.com>"}
+    extra_headers = {'Message-Id' => message_id(@task, @task.recent_comments.first)}
 
     if @task.comments.count > 1
       subject = "Re: #{subject}"
-      extra_headers['In-Reply-To'] = "<task/#{@task.id}/comment/#{@task.recent_comments.second.id}@teambox.com>"
+      extra_headers['In-Reply-To'] = message_id(@task, @task.recent_comments.second)
     end
     
     mail({
@@ -399,5 +399,9 @@ class Emailer < ActionMailer::Base
       desc = task.comments.first.try(:body)
       task_description = truncate(desc ? desc : '', :length => 50)
       task_description.blank? ? '' : " - #{task_description}"
+    end
+
+    def message_id(*args)
+      "<#{args.collect {|item| [item.class.name.underscore,item.id].join('-')}.join('-')}@#{Teambox.config.smtp_settings.domain}>"
     end
 end
